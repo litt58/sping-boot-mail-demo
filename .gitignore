@@ -1,0 +1,7 @@
+*.iml
+.idea/
+**/target
+logs/
+src/main/docker/logs/
+details/
+**/.DS_Store
