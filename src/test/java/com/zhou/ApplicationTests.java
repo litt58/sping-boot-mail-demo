@@ -1,6 +1,10 @@
 package com.zhou;
 
+import freemarker.cache.StringTemplateLoader;
+import freemarker.template.Configuration;
+import freemarker.template.Template;
 import org.apache.commons.collections.map.HashedMap;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.apache.velocity.app.VelocityEngine;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -15,7 +19,10 @@ import org.springframework.ui.velocity.VelocityEngineUtils;
 
 import javax.mail.internet.MimeMessage;
 import java.io.File;
+import java.io.StringWriter;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created by 10124 on 2017/6/23.
@@ -30,8 +37,8 @@ public class ApplicationTests {
     private VelocityEngine velocityEngine;
 
     /**
-     * @description: 简单邮件
      * @throws Exception
+     * @description: 简单邮件
      */
     @Test
     public void sendSimpleMail() throws Exception {
@@ -44,8 +51,8 @@ public class ApplicationTests {
     }
 
     /**
-     * @description: 带附件邮件
      * @throws Exception
+     * @description: 带附件邮件
      */
     @Test
     public void sendAttachmentsMail() throws Exception {
@@ -62,8 +69,8 @@ public class ApplicationTests {
     }
 
     /**
-     * @description: 插入图片邮件
      * @throws Exception
+     * @description: 插入图片邮件
      */
     @Test
     public void sendInlineMail() throws Exception {
@@ -79,8 +86,8 @@ public class ApplicationTests {
     }
 
     /**
-     * @description: 带velocity模块的模板邮件。
      * @throws Exception
+     * @description: 带velocity模块的模板邮件。
      */
     @Test
     public void sendTemplateMail() throws Exception {
@@ -95,5 +102,48 @@ public class ApplicationTests {
                 velocityEngine, "template.vm", "UTF-8", model);
         helper.setText(text, true);
         mailSender.send(mimeMessage);
+    }
+
+    /**
+     * @throws Exception
+     * @description: 发送freemarker解析字符串形式的邮件
+     */
+    @Test
+    public void sendFreemarkerSimpleMail() throws Exception {
+        Configuration templateConfiguration = new Configuration();
+        String templateContent = "<html>\n" +
+                "<body>\n" +
+                "<h3>你好， ${name}, 这是一封模板邮件!</h3>\n" +
+                "</body>\n" +
+                "</html>\n";
+        //模板Id
+        String id = UUID.randomUUID().toString();
+        //设置模板相关信息
+        StringTemplateLoader loader = new StringTemplateLoader();
+        loader.putTemplate(id, templateContent);
+        templateConfiguration.setTemplateLoader(loader);
+
+        Template template;
+        StringWriter sw = null;
+        String result;
+        Map content = new HashMap<String, Object>();
+        content.put("name", "周小黑");
+        try {
+            //获取模板
+            template = templateConfiguration.getTemplate(id);
+            sw = new StringWriter();
+            //根据模板解析数据为普通html
+            template.process(content, sw);
+            result = sw.toString();
+        } finally {
+            IOUtils.closeQuietly(sw);
+        }
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("zhouzhen@chinadaas.com");
+        message.setTo("1012476676@qq.com");
+        message.setSubject("测试邮件");
+        message.setText(result);
+        mailSender.send(message);
     }
 }
